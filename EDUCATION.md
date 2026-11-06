@@ -69,6 +69,7 @@ Full exit of every share returns every asset in the 1000/1000 test, because `cei
 | Floor the exit | Systematic leftover | ceil (334 not 333) | `partial burn uses ceiling assets` |
 | Burn more shares than exist | Steal the pot | `exceeds total shares` | `refuses burn above total shares` |
 | Zero deposit | Junk row | refused | `refuses zero deposit` |
+| Donate after 1-share open | Victim floors to 0 | zero mint refused; attacker still holds the pot | `demonstrates first-depositor donation…` |
 
 ---
 
@@ -79,6 +80,8 @@ Full exit of every share returns every asset in the 1000/1000 test, because `cei
 Empty vault mints 1:1. A classic attack is: deposit 1, donate a huge amount directly to the vault (assets jump, shares stay 1), then the next user's deposit floors to 0 shares and is rejected or, in a vault that still takes the assets, stolen. This lab rejects a 0-share mint, which stops the "mint zero and keep the assets" variant **if** deposit is the only way in. It does not add a virtual offset (dead shares minted to the zero address on the first deposit). The security file says that review is still required. Believe it.
 
 The test simulates yield by assigning `assets: 1500n` with no deposit. That is the same shape as a donation. The lab will quote 66 shares. It will not notice that the 500 appeared without a transfer.
+
+The donation demonstration deposits `1`, sets assets to `1_000_000n`, quotes `0` for a `100` deposit, refuses the mint, and shows the attacker can still burn the single share for the whole pot. That is the surface. It is not a defense.
 
 ### Custody is the missing half
 
@@ -95,7 +98,7 @@ Until those exist, a passing `npm test` is a rounding spec, not a vault.
 
 ### Exercise
 
-1. Empty vault, deposit 1, then set assets to `1000000n` without minting. `sharesForDeposit` of `100n`? `floor(100 * 1 / 1000000) = 0`, and `deposit` then throws `deposit too small to mint shares`. Derived. The tests do not run this donation.
+1. Empty vault, deposit 1, then set assets to `1000000n` without minting. `sharesForDeposit` of `100n`? `floor(100 * 1 / 1000000) = 0`, and `deposit` then throws `deposit too small to mint shares`. **Tested** (`demonstrates first-depositor donation…`). The attacker can still burn the one share for the pot.
 2. Why is `{ assets: 0n, shares: 5n }` refused? (Inconsistent empty vault. The 1:1 branch requires both sides zero.)
 3. What is not in the repo? (Token notify, per-user ledger, virtual offset.)
 
@@ -106,3 +109,4 @@ Until those exist, a passing `npm test` is a rounding spec, not a vault.
 - An interest rate
 - That ceiling "always leaves dust in the vault" on a 1-of-3 burn (the leaver receives 334 of 1000)
 - A compiled custody contract
+- A virtual-offset first-depositor defense
