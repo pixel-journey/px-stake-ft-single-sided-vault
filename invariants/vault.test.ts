@@ -20,10 +20,8 @@ describe("deposit", () => {
 
   it("later deposit rounds shares down", () => {
     let { vault } = deposit(emptyVault(), 1000n);
-    // Simulate yield: assets grow without new shares
     vault = { assets: 1500n, shares: vault.shares };
     const minted = sharesForDeposit(vault, 100n);
-    // floor(100 * 1000 / 1500) = floor(66.66) = 66
     assert.equal(minted, 66n);
   });
 
@@ -41,7 +39,6 @@ describe("deposit", () => {
   });
 
   it("refuses a deposit too small to mint shares", () => {
-    // After yield, 1 unit deposits to zero shares: floor(1 * 1000 / 1500) = 0
     const vault = { assets: 1500n, shares: 1000n };
     assert.throws(() => deposit(vault, 1n), /deposit too small to mint shares/);
     assert.equal(vault.assets, 1500n);
@@ -61,6 +58,19 @@ describe("deposit", () => {
       /inconsistent empty vault/,
     );
   });
+
+  it("demonstrates first-depositor donation leaves victim at zero shares", () => {
+    // Attacker deposits 1 share, then assets jump (donation shape). Victim's 100 floors to 0.
+    // This lab rejects the zero mint. It does not add a virtual offset.
+    const { vault: afterAttacker } = deposit(emptyVault(), 1n);
+    assert.equal(afterAttacker.shares, 1n);
+    const donated = { assets: 1_000_000n, shares: afterAttacker.shares };
+    assert.equal(sharesForDeposit(donated, 100n), 0n);
+    assert.throws(() => deposit(donated, 100n), /deposit too small to mint shares/);
+    // Attacker still owns the only share against the inflated pot.
+    assert.equal(donated.shares, 1n);
+    assert.equal(assetsForBurn(donated, 1n), 1_000_000n);
+  });
 });
 
 describe("withdraw", () => {
@@ -74,7 +84,6 @@ describe("withdraw", () => {
 
   it("partial burn uses ceiling assets", () => {
     const vault = { assets: 1000n, shares: 3n };
-    // ceil(1 * 1000 / 3) = ceil(333.33) = 334
     assert.equal(assetsForBurn(vault, 1n), 334n);
     const out = withdraw(vault, 1n);
     assert.equal(out.assetsOut, 334n);
@@ -83,7 +92,6 @@ describe("withdraw", () => {
   });
 
   it("ceiling withdraw leaves residual for remaining shares", () => {
-    // Three sequential burns of 1 share from 1000/3 should not overpay
     let vault = { assets: 1000n, shares: 3n };
     const a = withdraw(vault, 1n);
     vault = a.vault;
