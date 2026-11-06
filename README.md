@@ -14,15 +14,16 @@
 - Why a later deposit uses `floor(deposit * shares / assets)` after yield.
 - Why a partial withdraw uses ceiling division so leftover dust stays in the vault.
 - Why an empty vault with assets and no shares (or the reverse) is refused.
+- Why refusing a zero-share mint is only a partial answer to first-depositor inflation.
 
 ## What is actually in the repo
 
 | Piece | Role |
 | --- | --- |
 | `invariants/vault.ts` | `sharesForDeposit`, `assetsForBurn`, `deposit`, `withdraw` |
-| `invariants/vault.test.ts` | Executed claims |
-| `EDUCATION.md` | Which way each division rounds |
-| `SECURITY.md` | Inflation and first-depositor notes |
+| `invariants/vault.test.ts` | Executed claims (17 tests) |
+| `EDUCATION.md` | Which way each division rounds; donation surface |
+| `SECURITY.md` | Inflation notes; donation demonstrated, not fixed |
 
 ## What is true (executed)
 
@@ -30,10 +31,16 @@
 | --- | --- |
 | First deposit `1000n` | minted `1000`, assets `1000`, shares `1000` |
 | After assets are set to `1500` with shares still `1000`, deposit quote for `100n` | `floor(100 * 1000 / 1500) = 66` shares |
+| Later deposit after yield | vault mutates: assets `1600`, shares `1066` |
 | Zero deposit | refused |
+| Deposit that would mint 0 shares | refused; vault unchanged |
+| Assets without shares, or shares without assets | `inconsistent empty vault` |
 | Full withdraw of `1000` shares after a `1000` deposit | `1000` assets out; vault empty |
 | Vault `{ assets: 1000, shares: 3 }`, burn `1` share | `ceil(1000 / 3) = 334` assets |
-| Burn more shares than exist | refused |
+| Three sequential 1-share burns from `1000/3` | sum out `1000`; vault empty |
+| Burn more shares than exist / zero burn / no shares | refused |
+| Amounts above `MAX_AMOUNT` or negative | refused |
+| Donation after 1-share open (assets → `1e6`) | victim deposit of `100` refused; attacker can still burn the sole share for the pot |
 
 ## The rule, in order
 
@@ -70,6 +77,7 @@ assetsForBurn({ assets: 1000n, shares: 3n }, 1n); // 334n
 - Yield in the test is a direct write to `assets`. Nothing here accrues interest.
 - Ceiling withdraw can pay more than a floor quote would. That is intentional: the vault keeps the residual only after the ceiling is paid.
 - This file has no depositor list. Shares are a single total.
+- Refusing a zero-share mint is **not** a virtual-offset defense. See [SECURITY.md](SECURITY.md).
 
 ## Best practice and the opposite
 
@@ -85,7 +93,7 @@ assetsForBurn({ assets: 1000n, shares: 3n }, 1n); // 334n
 deposit / withdraw math          [tested]
     → token on_notify custody        [not in this repo]
     → per-account share ledger       [not in this repo]
-    → donation / inflation defense   [not in this repo]
+    → donation / inflation defense   [demonstrated surface only]
 ```
 
 ## Related
