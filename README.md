@@ -1,17 +1,16 @@
 # Shares floor in, assets ceil out
 
-> **Trust:** private educational lab (Tier B)  
 > **Domain:** single-sided FT vault  
 > **Sources:** [SOURCES.md](SOURCES.md)  
-> **Vault:** [px-contract-examples-vault](https://github.com/pixel-journey/px-contract-examples-vault)
+> **Catalog:** [px-contract-examples-vault](https://github.com/pixel-journey/px-contract-examples-vault)
 
-**One-sentence goal:** Teach vault **share mint (floor)** and **burn (ceil)** so rounding favors the pool, not the last actor.
+**Goal:** Vault **share mint (floor)** and **burn (ceil)** so rounding favors the pool, not the last actor.
 
-**Real code:** `npm test` (unit + **multi-user composition**). **Not** a live custody contract, **not** an `on_notify` deposit, **not** wasm.
+**Code under test:** `npm test` (unit + multi-user composition). Pure share math — not a live custody contract, not an `on_notify` deposit, not wasm.
 
-Token primitives on WAX still depend on the token contract you use — see [eosio.token reference](https://github.com/eosio/eosio.contracts) and [docs.wax.io](https://docs.wax.io/).
+Token primitives on WAX still depend on the token contract you use — [eosio.token](https://github.com/eosio/eosio.contracts), [docs.wax.io](https://docs.wax.io/).
 
-## Composition note
+## Composition
 
 The pure vault tracks only **totals**. Production must also keep a **per-account share book**. `vault.composition.test.ts` pairs deposit/withdraw with that book: book sum always equals `vault.shares`, accounts cannot burn more than they hold, and full exit conserves assets.
 
@@ -31,8 +30,6 @@ The pure vault tracks only **totals**. Production must also keep a **per-account
 - [px-stake-nft-custodial-masterchef](https://github.com/pixel-journey/px-stake-nft-custodial-masterchef)
 - [px-stake-nft-noncustodial-scanner](https://github.com/pixel-journey/px-stake-nft-noncustodial-scanner)
 - [px-token-balance-ledger](https://github.com/pixel-journey/px-token-balance-ledger)
-
-## Run
 
 ```bash
 npm test
