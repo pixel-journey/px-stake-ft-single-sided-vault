@@ -1,23 +1,39 @@
-# Worked examples — single-sided vault
+# Worked examples — single-sided FT vault
 
-## Example A — first deposit 1:1
+Shares mint **floor** on deposit; assets out on burn use **ceiling**. Pure totals only — ownership is a separate book in composition tests.
 
-```text
-deposit(empty, 1000n) → minted 1000, assets 1000, shares 1000
-```
+## First deposit
 
-## Example B — floor on mint
+Deposit 1000 into empty → minted **1000**, assets 1000, shares 1000 (1:1).
 
-Assets 1500, shares 1000; deposit 100 → `floor(100 * 1000 / 1500) = 66` shares.
+## Later deposit (floor)
 
-## Example C — ceil on burn
+After first 1000, inflate assets to 1500 (same shares 1000). Deposit 100:
 
-Assets/shares ratio leaves dust: burn 1 share from `1000/3` style book → ceil assets out. Three sequential 1-share burns sum to full assets (composition).
+| Field | Value |
+| --- | --- |
+| minted | **66** (`floor(100 * 1000 / 1500)`) |
+| assets | 1600 |
+| shares | 1066 |
 
-## Example D — dust deposit
+Deposit 1 on that inflated vault → `deposit too small to mint shares` (no state change).
 
-Deposit too small to mint ≥ 1 share → refused.
+## Withdraw (ceiling)
 
-## Example E — multi-user book (composition)
+Vault `{ assets: 1000, shares: 3 }`, burn 1 → assetsOut **334**, remaining assets 666, shares 2.
 
-Per-account share book: `sum(book) === vault.shares`; cannot burn more than held; full exit conserves.
+Three sequential 1-share burns pay **1000** total and clear the vault.
+
+## First-depositor donation shape
+
+Attacker deposits 1; assets jump to 1_000_000 with shares still 1. Victim deposit 100 floors to **0** and is refused. Attacker burning 1 would take **1_000_000**. Lab refuses zero mint; it does **not** add a virtual offset (document that product gap).
+
+## Composition desk
+
+Alice 1000 then inflation then Bob 100 → alice 1000 shares, bob 66, sumBook === vault.shares.
+
+Alice cannot debit more shares than her book. Full alice+bob exit of 900+100 deposits pays **1000** and empties vault and book.
+
+## Refusals
+
+Zero deposit/burn; burn exceeds total shares; assets without shares / shares without assets (inconsistent empty); amount > MAX_AMOUNT or negative.
