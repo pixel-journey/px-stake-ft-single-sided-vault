@@ -2,27 +2,35 @@
 
 ## Rounding
 
-- **Floor on deposit** so a depositor cannot round their share count upward against the pool.
-- **Ceiling on burn** so an exit cannot systematically leave attacker-shaped dust via truncating division.
-- Remember: ceiling pays the **leaver** more (e.g. 334 of 1000 for 1 of 3 shares), which is intentional in this lab.
+- **Floor on deposit** so a depositor cannot round shares up against the pool.
+- **Ceiling on burn** so an exit cannot farm truncation dust. The leaver can receive more than a pure floor (1 of 3 shares of 1000 assets → **334**). That is intentional here.
+- Three 1-share burns of a 3-share / 1000-asset vault must sum to 1000. If they do not, the formula is wrong.
 
-## Product design
+## Product
 
 | Topic | Guidance |
 | --- | --- |
-| Per-account book | Pure vault only has totals. Composition desk is the pattern for who owns shares. |
-| First depositor | 1:1 open is convenient and dangerous. Virtual offset (dead shares) is a common defense this lab does **not** implement. |
-| Donation / yield | Direct asset increase without mint is the same shape as inflation. Quote carefully; refuse zero mint. |
-| Custody | Real vaults credit only on correct token `on_notify` (contract, symbol, precision, to=self). |
-| Share token vs table | Either an issued share FT or a row per account; both need conservation with vault.shares. |
+| Per-account book | The pure vault only has totals. A desk must track who owns shares. |
+| First depositor | 1:1 open is convenient and dangerous. A virtual offset (dead shares) is a common defense this lab does **not** implement. |
+| Donation | Assets up, shares unchanged, next mint uses the new ratio. A mint of 0 shares is refused (inflation victim). |
+| Custody | Credit only on the real token `on_notify`: contract, symbol, precision, `to == self`. |
+| Shares | An issued share token or a row per account. Either must match `vault.shares`. |
 
-## Pairing with other labs
+## Common mistakes
 
-- [token balance ledger](https://github.com/pixel-journey/px-token-balance-ledger) — conservation under the token itself
-- [masterchef](https://github.com/pixel-journey/px-stake-nft-custodial-masterchef) — emission, not share mint math
-- [invariant kit](https://github.com/pixel-journey/px-invariant-kit) — safe uint math and quantity gates
-- [non-custodial NFT scanner](https://github.com/pixel-journey/px-stake-nft-noncustodial-scanner) — stake without moving the asset
+1. Rounding both ways with floor (exits leak dust to the last holder, or the opposite, depending on order).
+2. Minting shares for a donation that should only raise the ratio.
+3. Calling this an NFT chef. Emissions are [masterchef](https://github.com/pixel-journey/px-stake-nft-custodial-masterchef). Non-custodial scan is [scanner](https://github.com/pixel-journey/px-stake-nft-noncustodial-scanner).
+4. Using JavaScript `number` near `2^62`.
 
-## Teaching phrase
+## Nice-to-have extensions (not in this repo)
 
-> Floor in protects existing LPs from generous mints; ceil out avoids a floor-exit dust game. Neither replaces custody or a first-depositor defense.
+| Idea | Note |
+| --- | --- |
+| Dead shares on first deposit | Changes the 1000 → 1000 test |
+| Withdrawal fee | Another bps floor; document who receives it |
+| Pause deposits | [pausable](https://github.com/pixel-journey/px-token-pausable-emergency-guard) |
+
+> Floor in protects existing LPs from generous mints. Ceil out avoids a floor-exit dust game. Neither replaces custody or a first-depositor defense.
+
+Related: [token ledger](https://github.com/pixel-journey/px-token-balance-ledger) · [invariant kit](https://github.com/pixel-journey/px-invariant-kit) · [dust](https://github.com/pixel-journey/px-token-dust-truncation-visualizer)
